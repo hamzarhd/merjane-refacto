@@ -8,8 +8,10 @@ import com.nimbleways.springboilerplate.repositories.ProductRepository;
 import com.nimbleways.springboilerplate.services.implementations.ProductService;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -41,31 +43,46 @@ public class MyController {
         ids.add(orderId);
         Set<Product> products = order.getItems();
         for (Product p : products) {
-            if (p.getType().equals("NORMAL")) {
-                if (p.getAvailable() > 0) {
-                    p.setAvailable(p.getAvailable() - 1);
+        	int available = Optional.ofNullable(p.getAvailable()).orElse(0);
+        	int sold = Optional.ofNullable(p.getSold()).orElse(0);
+        	int maxQuantity = Optional.ofNullable(p.getMaxQuantity()).orElse(0);
+        	LocalDate seasonStart = Optional.ofNullable(p.getSeasonStartDate()).orElse(LocalDate.now());
+        	LocalDate seasonEnd = Optional.ofNullable(p.getSeasonEndDate()).orElse(LocalDate.now());
+        	LocalDate expiryDate = Optional.ofNullable(p.getExpiryDate()).orElse(LocalDate.now());
+        	LocalDateTime endFlashSoldDate = Optional.ofNullable(p.getEndFlashSoldDate()).orElse(LocalDateTime.now());
+        	if (p.getType().equals("NORMAL")) {
+                if (available > 0) {
+                    p.setAvailable(available - 1);
                     pr.save(p);
                 } else {
-                    int leadTime = p.getLeadTime();
+                    int leadTime = Optional.ofNullable(p.getLeadTime()).orElse(0);
                     if (leadTime > 0) {
                         ps.notifyDelay(leadTime, p);
                     }
                 }
             } else if (p.getType().equals("SEASONAL")) {
                 // Add new season rules
-                if ((LocalDate.now().isAfter(p.getSeasonStartDate()) && LocalDate.now().isBefore(p.getSeasonEndDate())
-                        && p.getAvailable() > 0)) {
-                    p.setAvailable(p.getAvailable() - 1);
+                if ((LocalDate.now().isAfter(seasonStart) && LocalDate.now().isBefore(seasonEnd)
+                        && available > 0)) {
+                    p.setAvailable(available - 1);
                     pr.save(p);
                 } else {
                     ps.handleSeasonalProduct(p);
                 }
             } else if (p.getType().equals("EXPIRABLE")) {
-                if (p.getAvailable() > 0 && p.getExpiryDate().isAfter(LocalDate.now())) {
-                    p.setAvailable(p.getAvailable() - 1);
+                if (available > 0 && expiryDate.isAfter(LocalDate.now())) {
+                    p.setAvailable(available - 1);
                     pr.save(p);
                 } else {
                     ps.handleExpiredProduct(p);
+                }
+            } else if (p.getType().equals("FLASHSALE")) {
+                if (sold <= maxQuantity && endFlashSoldDate.isAfter(LocalDateTime.now()) && available > 0) {
+                			 p.setAvailable(available - 1);
+                			 p.setSold(p.getSold() + 1);
+                             pr.save(p);
+                } else {
+                    ps.handleFlashSaleProduct(p);
                 }
             }
         }

@@ -1,6 +1,8 @@
 package com.nimbleways.springboilerplate.services.implementations;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -24,11 +26,13 @@ public class ProductService {
     }
 
     public void handleSeasonalProduct(Product p) {
-        if (LocalDate.now().plusDays(p.getLeadTime()).isAfter(p.getSeasonEndDate())) {
+    	LocalDate seasonStart = Optional.ofNullable(p.getSeasonStartDate()).orElse(LocalDate.now());
+    	LocalDate seasonEnd = Optional.ofNullable(p.getSeasonEndDate()).orElse(LocalDate.now());
+        if (LocalDate.now().plusDays(p.getLeadTime()).isAfter(seasonEnd)) {
             ns.sendOutOfStockNotification(p.getName());
             p.setAvailable(0);
             pr.save(p);
-        } else if (p.getSeasonStartDate().isAfter(LocalDate.now())) {
+        } else if (seasonStart.isAfter(LocalDate.now())) {
             ns.sendOutOfStockNotification(p.getName());
             pr.save(p);
         } else {
@@ -37,7 +41,9 @@ public class ProductService {
     }
 
     public void handleExpiredProduct(Product p) {
-        if (p.getAvailable() > 0 && p.getExpiryDate().isAfter(LocalDate.now())) {
+    	int available = Optional.ofNullable(p.getAvailable()).orElse(0);
+    	LocalDate expiryDate = Optional.ofNullable(p.getExpiryDate()).orElse(LocalDate.now());
+        if (available > 0 && expiryDate.isAfter(LocalDate.now())) {
             p.setAvailable(p.getAvailable() - 1);
             pr.save(p);
         } else {
@@ -45,5 +51,19 @@ public class ProductService {
             p.setAvailable(0);
             pr.save(p);
         }
+    }
+    public void handleFlashSaleProduct(Product p) {
+    	int sold = Optional.ofNullable(p.getSold()).orElse(0);
+    	int maxQuantity = Optional.ofNullable(p.getMaxQuantity()).orElse(0);
+    	LocalDateTime endFlashSoldDate = Optional.ofNullable(p.getEndFlashSoldDate()).orElse(LocalDateTime.now());
+    	if (LocalDateTime.now().plusDays(p.getLeadTime()).isBefore(p.getEndFlashSoldDate())) {
+            notifyDelay(p.getLeadTime(), p);
+        }
+    	else if (sold > maxQuantity ||  LocalDateTime.now().isAfter(endFlashSoldDate)
+    			|| LocalDateTime.now().plusDays(p.getLeadTime()).isAfter(endFlashSoldDate)) {
+            ns.sendOutOfStockNotification(p.getName());
+            p.setAvailable(0);
+            pr.save(p);
+        } 
     }
 }
