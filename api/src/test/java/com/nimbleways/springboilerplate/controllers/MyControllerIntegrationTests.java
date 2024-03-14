@@ -21,6 +21,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -67,15 +68,19 @@ public class MyControllerIntegrationTests {
 
         private static List<Product> createProducts() {
                 List<Product> products = new ArrayList<>();
-                products.add(new Product(null, 15, 30, "NORMAL", "USB Cable", null, null, null));
-                products.add(new Product(null, 10, 0, "NORMAL", "USB Dongle", null, null, null));
+                products.add(new Product(null, 15, 30, "NORMAL", "USB Cable", null, null, null,null,null,null));
+                products.add(new Product(null, 10, 0, "NORMAL", "USB Dongle", null, null, null,null,null,null));
                 products.add(new Product(null, 15, 30, "EXPIRABLE", "Butter", LocalDate.now().plusDays(26), null,
-                                null));
-                products.add(new Product(null, 90, 6, "EXPIRABLE", "Milk", LocalDate.now().minusDays(2), null, null));
+                                null,null,null,null));
+                products.add(new Product(null, 90, 6, "EXPIRABLE", "Milk", LocalDate.now().minusDays(2), null, null,null,null,null));
                 products.add(new Product(null, 15, 30, "SEASONAL", "Watermelon", null, LocalDate.now().minusDays(2),
-                                LocalDate.now().plusDays(58)));
+                                LocalDate.now().plusDays(58),null,null,null));
                 products.add(new Product(null, 15, 30, "SEASONAL", "Grapes", null, LocalDate.now().plusDays(180),
-                                LocalDate.now().plusDays(240)));
+                                LocalDate.now().plusDays(240),null,null,null));
+                products.add(new Product(null, 5, 2, "FLASHSALE", "EXAMPLE1", null, null,
+                        null,LocalDateTime.now().plusHours(36),15,0));
+        products.add(new Product(null, 15, 4, "FLASHSALE", "EXAMPLE2", null, null,
+                        null,LocalDateTime.now().plusHours(36),10,10));
                 return products;
         }
 }
