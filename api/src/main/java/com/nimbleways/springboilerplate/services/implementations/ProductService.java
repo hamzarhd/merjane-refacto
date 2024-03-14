@@ -26,13 +26,14 @@ public class ProductService {
     }
 
     public void handleSeasonalProduct(Product p) {
-    	LocalDate seasonStart = Optional.ofNullable(p.getSeasonStartDate()).orElse(LocalDate.now());
     	LocalDate seasonEnd = Optional.ofNullable(p.getSeasonEndDate()).orElse(LocalDate.now());
-        if (LocalDate.now().plusDays(p.getLeadTime()).isAfter(seasonEnd)) {
+        int leadTime = Optional.ofNullable(p.getLeadTime()).orElse(0);
+
+        if (LocalDate.now().plusDays(leadTime).isAfter(seasonEnd)) {
             ns.sendOutOfStockNotification(p.getName());
             p.setAvailable(0);
             pr.save(p);
-        } else if (seasonStart.isAfter(LocalDate.now())) {
+        } else if (seasonEnd.isAfter(LocalDate.now())) { //date must be after the season end date not the start
             ns.sendOutOfStockNotification(p.getName());
             pr.save(p);
         } else {
@@ -44,7 +45,7 @@ public class ProductService {
     	int available = Optional.ofNullable(p.getAvailable()).orElse(0);
     	LocalDate expiryDate = Optional.ofNullable(p.getExpiryDate()).orElse(LocalDate.now());
         if (available > 0 && expiryDate.isAfter(LocalDate.now())) {
-            p.setAvailable(p.getAvailable() - 1);
+            p.setAvailable(available - 1);
             pr.save(p);
         } else {
             ns.sendExpirationNotification(p.getName(), p.getExpiryDate());
@@ -56,11 +57,14 @@ public class ProductService {
     	int sold = Optional.ofNullable(p.getSold()).orElse(0);
     	int maxQuantity = Optional.ofNullable(p.getMaxQuantity()).orElse(0);
     	LocalDateTime endFlashSoldDate = Optional.ofNullable(p.getEndFlashSoldDate()).orElse(LocalDateTime.now());
-    	if (LocalDateTime.now().plusDays(p.getLeadTime()).isBefore(p.getEndFlashSoldDate())) {
-            notifyDelay(p.getLeadTime(), p);
+        int leadTime = Optional.ofNullable(p.getLeadTime()).orElse(0);
+
+    	if (LocalDateTime.now().plusDays(leadTime).isBefore(p.getEndFlashSoldDate())) {//if lead time is before the end of the flash date => send delay notif
+            notifyDelay(leadTime, p);
         }
     	else if (sold > maxQuantity ||  LocalDateTime.now().isAfter(endFlashSoldDate)
-    			|| LocalDateTime.now().plusDays(p.getLeadTime()).isAfter(endFlashSoldDate)) {
+    			|| LocalDateTime.now().plusDays(leadTime).isAfter(endFlashSoldDate)) {
+    		//if sold product surpass the max quantity or the flash time ended or the leadtime surpass the flash time => send notif out of stock
             ns.sendOutOfStockNotification(p.getName());
             p.setAvailable(0);
             pr.save(p);
